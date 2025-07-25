@@ -1,0 +1,7 @@
+requests
+langchain_community
+pypdf
+langchain
+sentence-transformers
+langchain_huggingface
+faiss-cpu

@@ -1,0 +1,11 @@
+# Virtual Environment
+venv/
+*.venv
+
+# Environment variables
+.env
+
+# Temporary files
+temp.pdf
+__pycache__/
+*.pyc
