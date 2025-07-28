@@ -10,3 +10,4 @@ python-dotenv
 langchain_core
 fastapi
 uvicorn
+gunicorn
