@@ -29,7 +29,7 @@ def load_pdf_files(path:str):
 
 
 def create_pdf_chunks(documents):
-    splitter=RecursiveCharacterTextSplitter(chunk_size=1000,chunk_overlap=200)
+    splitter=RecursiveCharacterTextSplitter(chunk_size=800,chunk_overlap=150)
     chunks=splitter.split_documents(documents=documents)
     return chunks
 
@@ -37,7 +37,7 @@ def create_pdf_chunks(documents):
 
 from langchain_community.vectorstores import FAISS
 from langchain_huggingface.embeddings import HuggingFaceEmbeddings
-
+faiss_url="faiss_database"
 def create_embeddings_and_vectorstore(url):
     path=fetch_pdf_from_url(url=url,path="temp.pdf")
     if not path:
@@ -46,8 +46,11 @@ def create_embeddings_and_vectorstore(url):
     chunks=create_pdf_chunks(documents=documents)
     if not chunks:
         print("PDF couldnt be loaded !!")
-    embedding_model=HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+    embedding_model=HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5",
+        model_kwargs={'device': 'cpu'},
+        encode_kwargs={'normalize_embeddings': True})
     vector_store=FAISS.from_documents(documents=chunks,embedding=embedding_model)
+    vector_store.save_local(faiss_url)
     return vector_store
 
 if __name__=='__main__':

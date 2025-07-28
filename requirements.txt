@@ -5,3 +5,8 @@ langchain
 sentence-transformers
 langchain_huggingface
 faiss-cpu
+langchain_openai
+python-dotenv
+langchain_core
+fastapi
+uvicorn
