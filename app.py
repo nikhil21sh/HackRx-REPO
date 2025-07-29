@@ -24,18 +24,20 @@ LLM_MODEL = "gpt-4o"
 app=FastAPI(title="Sahyog : Your policy query solver",description="Intelligent query retrieval bot",version="1.0.0")
 
 llm=None
+embedding_model=None
 @app.on_event("startup")
 async def event_startup():
-    """
-    Loads the reusable Language Model once when the application starts.
-    """
-    global llm
-    print("Application startup... Loading LLM.")
+    global llm,embedding_model
     try:
         llm = ChatOpenAI(
             model="gpt-4o",
             api_key=os.getenv("OPENAI_API_KEY"),
             temperature=0.0
+        )
+        embedding_model=HuggingFaceEmbeddings(
+            model_name=EMBEDDING_MODEL,
+            model_kwargs={'device':'cpu'},
+            encode_kwargs={'normalize_embeddings':True}
         )
         print("LLM loaded successfully.")
     except Exception as e:
@@ -58,7 +60,6 @@ def fetch_pdf_to_tempfile(url: str) -> str:
         raise HTTPException(status_code=400, detail=f"Failed to download document: {e}")
 
 def process_document_and_create_retriever(pdf_path: str):
-    """Loads, chunks, and creates an in-memory vector store and retriever."""
     print(f"Processing document: {pdf_path}")
     
     # Load and split the PDF
@@ -70,13 +71,8 @@ def process_document_and_create_retriever(pdf_path: str):
     if not chunks:
         raise HTTPException(status_code=400, detail="Could not extract text from the document.")
 
-    # Load the embedding model (this is a slow step)
-    print(f"Loading embedding model: {EMBEDDING_MODEL}...")
-    embedding_model = HuggingFaceEmbeddings(
-        model_name=EMBEDDING_MODEL,
-        model_kwargs={'device': 'cpu'},
-        encode_kwargs={'normalize_embeddings': True}
-    )
+
+    
     
     # Create an in-memory FAISS index
     print("Creating in-memory FAISS index...")
@@ -84,9 +80,7 @@ def process_document_and_create_retriever(pdf_path: str):
     
     return vector_store.as_retriever(search_type="similarity", search_kwargs={"k": 8})
 
-# ===============================================================================
-# 3. API AUTHENTICATION & MODELS (No changes here)
-# ===============================================================================
+
 
 auth_scheme = HTTPBearer()
 
@@ -102,9 +96,6 @@ class HackRxRunRequest(BaseModel):
 class HackRxRunResponse(BaseModel):
     answers: List[str]
 
-# ===============================================================================
-# 4. API ENDPOINT (NEW LOGIC)
-# ===============================================================================
 
 @app.post(
     "/hackrx/run",
@@ -119,14 +110,23 @@ async def hackrx_run(request: HackRxRunRequest):
     temp_pdf_path = None
     
     try:
-        # Step 1: Download the PDF to a temporary file
         temp_pdf_path = fetch_pdf_to_tempfile(request.documents)
 
-        # Step 2: Process the document and create the retriever
         retriever = process_document_and_create_retriever(temp_pdf_path)
 
-        # Step 3: Define the RAG chain for this request
-        qa_prompt_template = """You are a highly specialized AI assistant... (Your final, concise prompt here)"""
+        qa_prompt_template =  """
+You are an intelligent assistant trained to answer questions based strictly on the provided document context.
+
+Use ONLY the context below to answer the question. Do not use prior knowledge. If the answer is not found, reply with "I don't know".
+
+Context:
+{context}
+
+Question:
+{question}
+
+Answer:
+"""
         qa_prompt = PromptTemplate.from_template(qa_prompt_template)
         
         def format_docs(docs):
@@ -139,7 +139,6 @@ async def hackrx_run(request: HackRxRunRequest):
             | StrOutputParser()
         )
 
-        # Step 4: Run the questions through the chain
         print("Invoking RAG chain in batch mode...")
         answers = await rag_chain.abatch(request.questions)
         
@@ -149,14 +148,12 @@ async def hackrx_run(request: HackRxRunRequest):
         return HackRxRunResponse(answers=answers)
 
     except Exception as e:
-        # Re-raise HTTPExceptions, otherwise wrap other errors
         if isinstance(e, HTTPException):
             raise e
         print(f"An unexpected error occurred: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred while processing the request.")
     
     finally:
-        # Step 5: Clean up the temporary file
         if temp_pdf_path and os.path.exists(temp_pdf_path):
             os.remove(temp_pdf_path)
             print(f"Cleaned up temporary file: {temp_pdf_path}")
