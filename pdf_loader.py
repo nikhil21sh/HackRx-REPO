@@ -46,7 +46,7 @@ def create_embeddings_and_vectorstore(url):
     chunks=create_pdf_chunks(documents=documents)
     if not chunks:
         print("PDF couldnt be loaded !!")
-    embedding_model=HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2",
+    embedding_model=HuggingFaceEmbeddings(model_name="BAAI/bge-base-en-v1.5",
         model_kwargs={'device': 'cpu'},
         encode_kwargs={'normalize_embeddings': True})
     vector_store=FAISS.from_documents(documents=chunks,embedding=embedding_model)

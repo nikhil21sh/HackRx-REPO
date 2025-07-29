@@ -14,7 +14,7 @@ import os
 load_dotenv()
 API_BEARER_TOKEN="44c4e1bfaa1815c327c40af5037b7dc1abe33a8af2271394da8bbb13690fd99c"
 FAISS_INDEX_PATH="faiss_database"
-EMBEDDING_MODEL = "all-MiniLM-L6-v2"
+EMBEDDING_MODEL = "BAAI/bge-base-en-v1.5"
 LLM_MODEL = "gpt-4o"
 
 app=FastAPI(title="Sahyog : Your policy query solver",description="Intelligent query retrieval bot",version="1.0.0")
