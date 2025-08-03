@@ -15,6 +15,7 @@ COPY . .
 
 # --- Start Command (FIXED) ---
 # Define the command to run when the container starts.
-# We add "--timeout 300" to give the worker 300 seconds (5 minutes)
-# to load the heavy AI models during startup, preventing a timeout.
-CMD ["gunicorn", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "app:app", "--bind", "0.0.0.0:7860", "--timeout", "300"]
+# We add "--timeout 300" to give the worker 5 minutes to start up.
+# We add "--graceful-timeout 300" to give the worker 5 minutes to process a single request.
+CMD ["gunicorn", "-w", "1", "-k", "uvicorn.workers.UvicornWorker", "app:app", "--bind", "0.0.0.0:7860", "--timeout", "300", "--graceful-timeout", "300"]
+
